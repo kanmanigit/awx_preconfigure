@@ -1,0 +1,132 @@
+## AWX connection settings
+
+#env: usx01
+# env: usdc03
+tower_protocol: http
+# usx01 test awx (dev instance is 10.100.31.29)
+# tower_host: 10.100.31.36
+tower_host: 192.168.68.191
+# usdc03
+#tower_host: 10.140.67.162
+awx_ssl_verify: false
+
+ansible_user: vsadminadmin
+ansible_ssh_private_key_file: ~/.ssh/id_rsa
+ansible_python_interpreter: "/usr/bin/env python3"
+become: true
+
+## SCM Credential
+github_credential_name: "kanmanigit"
+github_credential_username: "kanmanigit"
+github_credential_password: xyz
+github_credential_description: "credentials for git access"
+
+## Machine credentials
+awx_svc_ansible_name: "kanmanimac-up"
+awx_svc_ansible_username: "kanmani  "
+awx_svc_ansible_description: "storage node VM creds"
+awx_svc_ansible_ssh_password: abc
+
+
+############## this should be moved out to environment specific var ################
+## AWX Authentication
+awx_admin_user: admin
+# for 10.100.31.36
+awx_admin_password: password
+awx_organization: default
+
+awx_organizations:
+  - name: Storage
+    description: Storage Platform Engineering
+
+#######################
+## inventory source
+#######################
+inventory_source: 
+    name: "home_inv"
+    description: "inventories at home"
+    organization: "default"
+#    inventory: "{{ env }}_MZ_inventory"
+#    credential: ""
+#    source: scm
+#    path: "inventories/{{ env }}/hosts"
+#    project: awx-vmbuild-posttasks
+
+#awx_inventory_sources: 
+#    - name: "storage_test_inv_source"
+#      description: "storage inventory for open_close report"
+ #     inventory: "test_storage_inventory"
+ #     credential: ""
+ #     source: scm
+ #     path: "inventories/drhmlab/hosts"
+  #    project: open-close-report-test
+  #    verbosity: 1
+  #    update_on_project_update: yes
+  #    update_cache_timeout: 1
+  
+#######################
+## AWX Credentials
+## Credentials can be different types
+#######################
+awx_credentials:
+    - name: "{{ github_credential_name }}"
+      organization: "{{ awx_organization }}"
+      kind: scm
+      password: "{{github_credential_password}}"
+      username: "{{github_credential_username}}"
+    # - name: "vault_password_default"
+    #   organization: "{{ awx_organization }}"
+    #   kind: vault
+    #   vault_password: "{{awx_vault_password}}"
+    #   access_list:
+    #     - user: "{{ro_username}}"
+    #       role_name: use
+    - name: "{{ awx_svc_ansible_name }}"
+      organization: "{{ awx_organization }}"
+      username: "{{ awx_svc_ansible_username }}"
+      kind: ssh
+      ssh_key_data: "{{ awx_svc_ansible_ssh_key }}"
+      description: "{{ awx_svc_ansible_description }}"
+    ## TODO: can't create this credential until we upgrade because we need to specify credental_type. 
+    ## only "kind" is available in 2.9
+    # - name: "{{ sssd_credential_name }}"
+    #   organization: "{{ awx_organization }}"
+    #   credential_type: sssd-credential-type
+    #   password: "{{ sssd_credential_password }}"
+    #   username: "{{ sssd_credential_username }}"
+    #   description: "{{ sssd_credential_description }}"
+  
+  #######################
+  ## AWX Projects
+  # After completion, it will wait for 60 secods for scm to update the project before creating any job templates
+  #######################
+awx_projects:
+    - name: open-close-report-test
+      organization: "{{ awx_organization }}"
+      description: " storage open/close report tasks"
+      scm_update_on_launch: true
+      scm_delete_on_update: true
+      scm_update_cache_timeout: 1
+      scm_type: git
+      scm_url: "https://github.emcrubicon.com/ramask2/storage_open_close_reports"
+      #scm_branch: "v1.2.0"
+      credential: kanmani-github
+  
+  #######################
+  ### AWX Job templates 
+  #######################
+awx_templates:
+    ### this template needs multiple credentials but 2.9 hasn't implimented credentials only credential.
+    - name: vault
+      job_type: run
+      description: "ping tasks"
+      project: vault
+      playbook: "ping.yml"
+      inventory: test_storage_inventorydefault
+      credential: kanmani_mac_ssh_key
+      #limit: "10.150.4.71"
+      verbosity: 3
+      #become_enabled: true
+      #ask_limit: true
+      #ask_inventory: true
+      # ask_extra_vars: true
